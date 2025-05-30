@@ -1,15 +1,15 @@
 services:
   - type: web
     name: gracedm-web
+    env: java
     buildCommand: |
       mvn clean install -DskipTests
-      wget https://repo1.maven.org/maven2/com/heroku/webapp-runner/10.1.36.0/webapp-runner-10.1.36.0.jar -O webapp-runner.jar 
-    startCommand: java -jar webapp-runner.jar --port $PORT target/gracedm.war
-    env: java
+      wget https://repo1.maven.org/maven2/com/heroku/webapp-runner/10.1.36.0/webapp-runner-10.1.36.0.jar -O webapp-runner.jar
+    startCommand: java $JAVA_OPTS -jar webapp-runner.jar --port $PORT target/gracedm.war
     autoDeploy: true
     envVars:
       - key: JAVA_OPTS
-        value:  -Xmx512m -XX:MaxRAMPercentage=75.0 -Djava.security.egd=file:/dev/./urandom
+        value: -Xmx512m -XX:MaxRAMPercentage=75.0 -Djava.security.egd=file:/dev/./urandom
 
       # Database (auto-linked)
       - key: DB_URL
