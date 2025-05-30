@@ -51,14 +51,10 @@ services:
       - key: MAX_UPLOAD_SIZE_MB
         value: "25"
 
-      # Misc
-	  - key: ENV
-	    value: prod
-
     healthCheckPath: /healthz
 
 databases:
   - name: gracedm-db
-    databaseName: gracedm
-    user: gracedm_user
+    databaseName: gracedm_prod_1kh6
+    user: gracedm_admin
     plan: free
