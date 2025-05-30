@@ -1,0 +1,14 @@
+<included>
+  <!-- WARN for most packages -->
+  <logger name="org.gihdm" level="WARN"/>
+  <logger name="org.gihdm.model" level="WARN"/>
+  <logger name="org.gihdm.repository" level="WARN"/>
+  <logger name="org.gihdm.controller" level="WARN"/>
+  <logger name="org.gihdm.security" level="WARN"/>
+
+  <!-- INFO for critical components -->
+  <logger name="org.gihdm.controller.MetricsServlet" level="INFO"/>
+  <logger name="org.gihdm.controller.ExceptionHandler" level="INFO"/>
+
+  <!-- Root remains INFO (from core) -->
+</included>

@@ -1,0 +1,4 @@
+# Cloudinary Configuration 
+cloudinary.cloud_name=YOUR_CLOUDINARY_CLOUD
+cloudinary.api_key=YOUR_CLOUDINARY_KEY
+cloudinary.api_secret=YOUR_CLOUDINARY_SECRET

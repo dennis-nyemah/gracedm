@@ -1,0 +1,64 @@
+services:
+  - type: web
+    name: gracedm-web
+    buildCommand: |
+      mvn clean install -DskipTests
+      wget https://repo1.maven.org/maven2/com/heroku/webapp-runner/10.1.36.0/webapp-runner-10.1.36.0.jar -O webapp-runner.jar 
+    startCommand: java -jar webapp-runner.jar --port $PORT target/gracedm.war
+    env: java
+    autoDeploy: true
+    envVars:
+      - key: JAVA_OPTS
+        value:  -Xmx512m -XX:MaxRAMPercentage=75.0 -Djava.security.egd=file:/dev/./urandom
+
+      # Database (auto-linked)
+      - key: DB_URL
+        fromDatabase:
+          name: gracedm-db
+          property: connectionString
+      - key: DB_USER
+        fromDatabase:
+          name: gracedm-db
+          property: user
+      - key: DB_PASSWORD
+        fromDatabase:
+          name: gracedm-db
+          property: password
+
+      # Cloudinary (set manually on Render UI)
+      - key: CLOUDINARY_CLOUD_NAME
+        sync: false
+      - key: CLOUDINARY_API_KEY
+        sync: false
+      - key: CLOUDINARY_API_SECRET
+        sync: false
+
+      # Google OAuth (set manually on Render UI for secrets)
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false
+      - key: GOOGLE_REDIRECT_URI
+        value: https://gracedm.onrender.com/oauth2callback
+
+      # Performance tuning
+	  - key: DB_MAX_POOL_SIZE
+	    value: "3"  
+	  - key: DB_MIN_IDLE
+	    value: "1"  
+	  - key: DB_CONNECTION_TIMEOUT
+	    value: "30000"  
+      - key: MAX_UPLOAD_SIZE_MB
+        value: "25"
+
+      # Misc
+	  - key: ENV
+	    value: prod
+
+    healthCheckPath: /healthz
+
+databases:
+  - name: gracedm-db
+    databaseName: gracedm
+    user: gracedm_user
+    plan: free
