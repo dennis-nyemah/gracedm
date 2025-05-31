@@ -2,38 +2,44 @@ package org.gihdm.config;
 
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
-
-import ch.qos.logback.classic.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.Properties;
-
-import org.slf4j.LoggerFactory;
-
 import java.io.InputStream;
+import java.net.URI;
+import java.net.URISyntaxException;
 
 public class HikariCPDataSource {
     private static final HikariDataSource dataSource;
-    private static final Logger logger = (Logger) LoggerFactory.getLogger(HikariCPDataSource.class);
+    private static final Logger logger = LoggerFactory.getLogger(HikariCPDataSource.class);
 
     static {
         try {
-        	Class.forName("org.postgresql.Driver");
+            Class.forName("org.postgresql.Driver");
+            
             // Load configuration
-            Properties props = new Properties();
             String renderDbUrl = System.getenv("DB_URL");
             String username = System.getenv("DB_USER");
             String password = System.getenv("DB_PASSWORD");
             
-            // Convert Render URL → JDBC format
-            String jdbcUrl = "jdbc:postgresql://" + 
-                renderDbUrl.replace("postgresql://", "")
-                .replace("@", ":5432@") + 
-                "?sslmode=require";
-
-            // Fallback to local properties if env vars not set
-            if (jdbcUrl == null || username == null || password == null) {
+            // Parse the Render URL properly
+            String jdbcUrl;
+            if (renderDbUrl != null) {
+                // Parse the Render URL format: postgresql://user:pass@host/dbname
+                URI dbUri = new URI(renderDbUrl.replace("postgresql://", "http://"));
+                String host = dbUri.getHost();
+                String path = dbUri.getPath();
+                String dbName = path.replaceFirst("/", "");
+                
+                jdbcUrl = String.format("jdbc:postgresql://%s:5432/%s?sslmode=require", host, dbName);
+                username = username != null ? username : dbUri.getUserInfo().split(":")[0];
+                password = password != null ? password : dbUri.getUserInfo().split(":")[1];
+            } else {
+                // Fallback to local properties if env vars not set
+                Properties props = new Properties();
                 try (InputStream input = HikariCPDataSource.class
                         .getResourceAsStream("/application.properties")) {
                     props.load(input);
@@ -43,6 +49,9 @@ public class HikariCPDataSource {
                 }
             }
 
+            logger.info("Using JDBC URL: " + jdbcUrl);
+            logger.info("Using username: " + username);
+
             // Configure HikariCP
             HikariConfig config = new HikariConfig();
             config.setJdbcUrl(jdbcUrl);
@@ -50,7 +59,7 @@ public class HikariCPDataSource {
             config.setPassword(password);
             
             // Production-optimized settings
-            config.setMaximumPoolSize(Integer.parseInt( System.getenv().getOrDefault("DB_MAX_POOL_SIZE", "3"))); 
+            config.setMaximumPoolSize(Integer.parseInt(System.getenv().getOrDefault("DB_MAX_POOL_SIZE", "3"))); 
             config.setMinimumIdle(Integer.parseInt(System.getenv().getOrDefault("DB_MIN_IDLE", "1"))); 
             config.setConnectionTimeout(30000); 
             config.setIdleTimeout(600000);
@@ -68,9 +77,9 @@ public class HikariCPDataSource {
     }
 
     public static Connection getConnection() throws SQLException {
-    	logger.debug("Acquiring DB connection from pool");
-    	Connection conn = dataSource.getConnection();
-    	logger.debug("Obtained connection [{}]", conn);
+        logger.debug("Acquiring DB connection from pool");
+        Connection conn = dataSource.getConnection();
+        logger.debug("Obtained connection [{}]", conn);
         return conn;
     }
 
@@ -80,8 +89,8 @@ public class HikariCPDataSource {
             logger.info("Database connection pool shutdown complete");
         }
     }
-    		
-	public static HikariDataSource getDataSource() {
-		return dataSource;
-	}
+    
+    public static HikariDataSource getDataSource() {
+        return dataSource;
+    }
 }
