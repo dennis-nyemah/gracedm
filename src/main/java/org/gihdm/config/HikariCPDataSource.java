@@ -22,9 +22,15 @@ public class HikariCPDataSource {
         	Class.forName("org.postgresql.Driver");
             // Load configuration
             Properties props = new Properties();
-            String jdbcUrl = System.getenv("DB_URL");
+            String renderDbUrl = System.getenv("DB_URL");
             String username = System.getenv("DB_USER");
             String password = System.getenv("DB_PASSWORD");
+            
+            // Convert Render URL → JDBC format
+            String jdbcUrl = "jdbc:postgresql://" + 
+                renderDbUrl.replace("postgresql://", "")
+                .replace("@", ":5432@") + 
+                "?sslmode=require";
 
             // Fallback to local properties if env vars not set
             if (jdbcUrl == null || username == null || password == null) {
