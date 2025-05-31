@@ -56,7 +56,7 @@
     </session-config>
 
     <!-- Security Constraint (commented until HTTPS is configured) -->
-    <!--
+    
     <security-constraint>
         <web-resource-collection>
             <web-resource-name>Protected Resources</web-resource-name>
@@ -66,5 +66,19 @@
             <transport-guarantee>CONFIDENTIAL</transport-guarantee>
         </user-data-constraint>
     </security-constraint>
-    -->
+    
+    <!-- Add this too for extra security headers -->
+    <filter>
+        <filter-name>httpHeaderSecurity</filter-name>
+        <filter-class>org.apache.catalina.filters.HttpHeaderSecurityFilter</filter-class>
+        <init-param>
+            <param-name>hstsEnabled</param-name>
+            <param-value>true</param-value>
+        </init-param>
+    </filter>
+    <filter-mapping>
+        <filter-name>httpHeaderSecurity</filter-name>
+        <url-pattern>/*</url-pattern>
+    </filter-mapping>
+   
 </web-app>
