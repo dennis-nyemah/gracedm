@@ -9,8 +9,6 @@ import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.Properties;
 import java.io.InputStream;
-import java.net.URI;
-import java.net.URISyntaxException;
 
 public class HikariCPDataSource {
     private static final HikariDataSource dataSource;
@@ -18,56 +16,92 @@ public class HikariCPDataSource {
 
     static {
         try {
+            // Explicitly register the PostgreSQL driver
             Class.forName("org.postgresql.Driver");
             
-            // Load configuration
-            String renderDbUrl = System.getenv("DB_URL");
-            String username = System.getenv("DB_USER");
-            String password = System.getenv("DB_PASSWORD");
+            // Load configuration from environment variables first
+            String dbUrl = System.getenv("DB_URL"); // Render's format: postgresql://user:pass@host/dbname
+            String dbUser = System.getenv("DB_USER");
+            String dbPassword = System.getenv("DB_PASSWORD");
             
-            // Parse the Render URL properly
-            String jdbcUrl;
-            if (renderDbUrl != null) {
-                // Parse the Render URL format: postgresql://user:pass@host/dbname
-                URI dbUri = new URI(renderDbUrl.replace("postgresql://", "http://"));
-                String host = dbUri.getHost();
-                String path = dbUri.getPath();
-                String dbName = path.replaceFirst("/", "");
-                
-                jdbcUrl = String.format("jdbc:postgresql://%s:5432/%s?sslmode=require", host, dbName);
-                username = username != null ? username : dbUri.getUserInfo().split(":")[0];
-                password = password != null ? password : dbUri.getUserInfo().split(":")[1];
-            } else {
-                // Fallback to local properties if env vars not set
+            // If environment variables not set, fall back to properties file
+            if (dbUrl == null || dbUser == null || dbPassword == null) {
+                logger.info("Loading database config from application.properties");
                 Properties props = new Properties();
-                try (InputStream input = HikariCPDataSource.class
-                        .getResourceAsStream("/application.properties")) {
+                try (InputStream input = HikariCPDataSource.class.getResourceAsStream("/application.properties")) {
                     props.load(input);
-                    jdbcUrl = props.getProperty("db.url");
-                    username = props.getProperty("db.user");
-                    password = props.getProperty("db.password");
+                    dbUrl = props.getProperty("db.url");
+                    dbUser = props.getProperty("db.user");
+                    dbPassword = props.getProperty("db.password");
                 }
             }
 
-            logger.info("Using JDBC URL: " + jdbcUrl);
-            logger.info("Using username: " + username);
+            // Parse Render's connection string
+            String jdbcUrl;
+            if (dbUrl.startsWith("postgresql://")) {
+                // Convert Render format to JDBC format
+                String cleanUrl = dbUrl.replace("postgresql://", "");
+                int atIndex = cleanUrl.indexOf("@");
+                String credentials = cleanUrl.substring(0, atIndex);
+                String hostAndDb = cleanUrl.substring(atIndex + 1);
+                
+                // Split host:port/dbname (Render uses default port 5432)
+                String host;
+                String dbName;
+                if (hostAndDb.contains("/")) {
+                    int slashIndex = hostAndDb.indexOf("/");
+                    host = hostAndDb.substring(0, slashIndex);
+                    dbName = hostAndDb.substring(slashIndex + 1);
+                } else {
+                    host = hostAndDb;
+                    dbName = "gracedm_prod_1kh6"; // default database
+                }
+                
+                // Construct proper JDBC URL
+                jdbcUrl = String.format("jdbc:postgresql://%s/%s?ssl=true&sslmode=require", host, dbName);
+                
+                // Extract username/password if not set separately
+                if (dbUser == null || dbPassword == null) {
+                    int colonIndex = credentials.indexOf(":");
+                    dbUser = credentials.substring(0, colonIndex);
+                    dbPassword = credentials.substring(colonIndex + 1);
+                }
+            } else {
+                // Assume it's already a JDBC URL
+                jdbcUrl = dbUrl;
+            }
+
+            logger.info("Using JDBC URL: " + jdbcUrl.replaceAll("password=[^&]*", "password=*****"));
+            logger.info("Using username: " + dbUser);
 
             // Configure HikariCP
             HikariConfig config = new HikariConfig();
             config.setJdbcUrl(jdbcUrl);
-            config.setUsername(username);
-            config.setPassword(password);
+            config.setUsername(dbUser);
+            config.setPassword(dbPassword);
             
-            // Production-optimized settings
-            config.setMaximumPoolSize(Integer.parseInt(System.getenv().getOrDefault("DB_MAX_POOL_SIZE", "3"))); 
-            config.setMinimumIdle(Integer.parseInt(System.getenv().getOrDefault("DB_MIN_IDLE", "1"))); 
-            config.setConnectionTimeout(30000); 
-            config.setIdleTimeout(600000);
-            config.setMaxLifetime(1800000); 
-            config.setLeakDetectionThreshold(5000);
+            // Optimized pool settings
             config.setPoolName("GraceDMPool");
+            config.setMaximumPoolSize(Integer.parseInt(System.getenv().getOrDefault("DB_MAX_POOL_SIZE", "3")));
+            config.setMinimumIdle(Integer.parseInt(System.getenv().getOrDefault("DB_MIN_IDLE", "1")));
+            config.setConnectionTimeout(30000);
+            config.setIdleTimeout(600000);
+            config.setMaxLifetime(1800000);
+            config.setLeakDetectionThreshold(5000);
+            
+            // PostgreSQL-specific optimizations
+            config.addDataSourceProperty("preparedStatementCacheQueries", "256");
+            config.addDataSourceProperty("preparedStatementCacheSizeMiB", "5");
+            config.addDataSourceProperty("cachePrepStmts", "true");
+            config.addDataSourceProperty("useServerPrepStmts", "true");
 
             dataSource = new HikariDataSource(config);
+            
+            // Test the connection
+            try (Connection conn = dataSource.getConnection()) {
+                logger.info("Successfully connected to database: " + conn.getMetaData().getDatabaseProductVersion());
+            }
+            
             logger.info("Database connection pool initialized successfully");
 
         } catch (Exception e) {
