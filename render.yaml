@@ -1,11 +1,8 @@
 services:
   - type: web
-    name: gracedm-web
-    env: java
-    buildCommand: |
-      mvn clean install -DskipTests
-      wget https://repo1.maven.org/maven2/com/heroku/webapp-runner/10.1.36.0/webapp-runner-10.1.36.0.jar -O webapp-runner.jar
-    startCommand: java $JAVA_OPTS -jar webapp-runner.jar --port $PORT target/gracedm.war
+    name: gracedm
+    dockerfilePath: Dockerfile
+    env: docker
     autoDeploy: true
     envVars:
       - key: JAVA_OPTS
@@ -42,12 +39,12 @@ services:
         value: https://gracedm.onrender.com/oauth2callback
 
       # Performance tuning
-	  - key: DB_MAX_POOL_SIZE
-	    value: "3"  
-	  - key: DB_MIN_IDLE
-	    value: "1"  
-	  - key: DB_CONNECTION_TIMEOUT
-	    value: "30000"  
+      - key: DB_MAX_POOL_SIZE
+        value: "3"
+      - key: DB_MIN_IDLE
+        value: "1"
+      - key: DB_CONNECTION_TIMEOUT
+        value: "30000"
       - key: MAX_UPLOAD_SIZE_MB
         value: "25"
 
