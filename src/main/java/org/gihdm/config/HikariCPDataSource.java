@@ -3,51 +3,70 @@ package org.gihdm.config;
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
 
+import ch.qos.logback.classic.Logger;
+
 import java.sql.Connection;
 import java.sql.SQLException;
+import java.util.Properties;
 
-import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.io.InputStream;
 
 public class HikariCPDataSource {
     private static final HikariDataSource dataSource;
-    private static final Logger logger = LoggerFactory.getLogger(HikariCPDataSource.class);
+    private static final Logger logger = (Logger) LoggerFactory.getLogger(HikariCPDataSource.class);
 
     static {
         try {
-            // 1. Load driver (essential for Render)
-            Class.forName("org.postgresql.Driver");
-            
-            // 2. Configure Hikari with free-tier optimized settings
+        	Class.forName("org.postgresql.Driver");
+            // Load configuration
+            Properties props = new Properties();
+            String jdbcUrl = System.getenv("DB_URL");
+            String username = System.getenv("DB_USER");
+            String password = System.getenv("DB_PASSWORD");
+
+            // Fallback to local properties if env vars not set
+            if (jdbcUrl == null || username == null || password == null) {
+                try (InputStream input = HikariCPDataSource.class
+                        .getResourceAsStream("/application.properties")) {
+                    props.load(input);
+                    jdbcUrl = props.getProperty("db.url");
+                    username = props.getProperty("db.user");
+                    password = props.getProperty("db.password");
+                }
+            }
+
+            // Configure HikariCP
             HikariConfig config = new HikariConfig();
-            config.setJdbcUrl("jdbc:postgresql://dpg-d0s747c9c44c73crpqog-a/gracedm_prod_1kh6?ssl=true&sslmode=require");
-            config.setUsername("gracedm_admin");
-            config.setPassword("0SicEutGPr0N6lLRzXWlKBe0iIkocayT");
+            config.setJdbcUrl(jdbcUrl);
+            config.setUsername(username);
+            config.setPassword(password);
             
-            // Free-tier optimized pool settings
-            config.setMaximumPoolSize(2);  // Very conservative for free tier
-            config.setMinimumIdle(1);      // Keep just 1 connection when idle
-            config.setConnectionTimeout(30000); // 30 seconds
-            config.setIdleTimeout(60000); // 1 minute idle timeout
-            config.setMaxLifetime(180000); // 3 minutes max lifetime
-            
-            // PostgreSQL optimizations that save resources
-            config.addDataSourceProperty("preparedStatementCacheQueries", "0"); // Disable cache
-            config.addDataSourceProperty("preparedStatementCacheSizeMiB", "0"); // Disable cache
-            
+            // Production-optimized settings
+            config.setMaximumPoolSize(Integer.parseInt( System.getenv().getOrDefault("DB_MAX_POOL_SIZE", "3"))); 
+            config.setMinimumIdle(Integer.parseInt(System.getenv().getOrDefault("DB_MIN_IDLE", "1"))); 
+            config.setConnectionTimeout(30000); 
+            config.setIdleTimeout(600000);
+            config.setMaxLifetime(1800000); 
+            config.setLeakDetectionThreshold(5000);
+            config.setPoolName("GraceDMPool");
+
             dataSource = new HikariDataSource(config);
-            logger.info("Database pool started with free-tier optimized settings");
-            
+            logger.info("Database connection pool initialized successfully");
+
         } catch (Exception e) {
-            logger.error("Database pool initialization failed", e);
+            logger.error("Failed to initialize database pool", e);
             throw new RuntimeException("Database initialization failed", e);
         }
     }
 
     public static Connection getConnection() throws SQLException {
-        return dataSource.getConnection();
+    	logger.debug("Acquiring DB connection from pool");
+    	Connection conn = dataSource.getConnection();
+    	logger.debug("Obtained connection [{}]", conn);
+        return conn;
     }
-
 
     public static void shutdown() {
         if (dataSource != null) {
