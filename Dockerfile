@@ -12,4 +12,4 @@ FROM eclipse-temurin:17-jdk-jammy
 WORKDIR /app
 COPY --from=builder /app/target/gracedm.war ./app.war
 COPY --from=builder /app/webapp-runner.jar .
-CMD ["sh", "-c", "java $JAVA_OPTS -jar webapp-runner.jar --port $PORT app.war"]
+CMD ["sh", "-c", "java $JAVA_OPTS -jar webapp-runner.jar --port $PORT --path / app.war"]
