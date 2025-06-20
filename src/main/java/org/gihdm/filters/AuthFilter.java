@@ -61,6 +61,7 @@ public class AuthFilter implements Filter {
 
     private boolean isPublicResource(String path) {
         return path.equals("/index.jsp") || 
+        	   path.equals("/googlee0aa0dca05c3108e.html") ||
         	   path.equals("/healthz") ||
                path.equals("/oauth2callback") ||              
                path.equals("/auth/google") ||
