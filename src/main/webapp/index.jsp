@@ -3,6 +3,7 @@
 <html lang="en">
 <head>
     <title>Welcome - GraceDM</title>
+    <meta name="google-site-verification" content="yHobNRINc05OwaGlG2X0e_s172NJ_Ok7x8fmZnTqA3k" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="Official document management system for Grace Intercessory Healing and Deliverance Ministry">
     <meta name="keywords" content="Grace Intercessory Healing and Deliverance Ministry documents, gracedm">
