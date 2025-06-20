@@ -21,15 +21,15 @@
         <error-code>500</error-code>
         <location>/error-handler</location>
     </error-page>  
-  
+
     <!-- Servlets -->
     <servlet>
-      <servlet-name>HomeServlet</servlet-name>
-      <servlet-class>org.gihdm.controller.HomeServlet</servlet-class>
+        <servlet-name>HomeServlet</servlet-name>
+        <servlet-class>org.gihdm.controller.HomeServlet</servlet-class>
     </servlet>
     <servlet-mapping>
-      <servlet-name>HomeServlet</servlet-name>
-      <url-pattern>/home</url-pattern>
+        <servlet-name>HomeServlet</servlet-name>
+        <url-pattern>/home</url-pattern>
     </servlet-mapping>
     
     <!-- Static Resources -->
@@ -46,42 +46,17 @@
         <url-pattern>/images/*</url-pattern>
     </servlet-mapping>
 
-    <!-- Session Configuration -->
+    <!-- Session Configuration (Temporarily relaxed for Render WAF) -->
     <session-config>
         <session-timeout>30</session-timeout>
         <cookie-config>
-          <http-only>true</http-only>
+            <http-only>true</http-only>
             <secure>true</secure>
-        </cookie-config>
+            </cookie-config>
     </session-config>
 
-    <!-- Security Constraint (commented until HTTPS is configured) -->
-    <security-constraint>
-        <web-resource-collection>
-            <web-resource-name>Protected Resources</web-resource-name>
-            <url-pattern>/*</url-pattern>
-        </web-resource-collection>
-        <user-data-constraint>
-            <transport-guarantee>CONFIDENTIAL</transport-guarantee>
-        </user-data-constraint>
-    </security-constraint>
-    
-    <!-- Add this too for extra security headers -->
-    <filter>
-        <filter-name>httpHeaderSecurity</filter-name>
-        <filter-class>org.apache.catalina.filters.HttpHeaderSecurityFilter</filter-class>
-        <init-param>
-            <param-name>hstsEnabled</param-name>
-            <param-value>true</param-value>
-        </init-param>
-    </filter>
-    <filter-mapping>
-        <filter-name>httpHeaderSecurity</filter-name>
-        <url-pattern>/*</url-pattern>
-    </filter-mapping>
-   
-
-
-    
-    
+    <!-- Removed: 
+         - security-constraint (HTTPS enforcement)
+         - All filter declarations (handled by @WebFilter)
+    -->
 </web-app>
