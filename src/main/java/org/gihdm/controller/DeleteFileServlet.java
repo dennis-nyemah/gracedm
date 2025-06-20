@@ -48,8 +48,10 @@ public class DeleteFileServlet extends HttpServlet {
             switch (doc.getStorageProvider()) {
                 case "CLOUDINARY" -> CloudinaryService.delete(doc.getFileId());
                 case "DRIVE" -> GoogleDriveService.delete(doc.getFileId(), session);
+                case "YOUTUBE" -> YouTubeService.delete(doc.getFileId(), req.getSession());
                 default -> throw new IllegalArgumentException("Unknown storage provider");
             }
+            
             
             // Delete metadata
             repo.delete(fileId);

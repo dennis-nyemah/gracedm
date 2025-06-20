@@ -1,6 +1,7 @@
 package org.gihdm.filters;
 
 import jakarta.servlet.*;
+
 import jakarta.servlet.annotation.WebFilter;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -26,7 +27,7 @@ public class AuthFilter implements Filter {
         HttpServletResponse response = (HttpServletResponse) res;
         String path = request.getRequestURI().substring(request.getContextPath().length()).toLowerCase();
         String method = request.getMethod();
-
+      
         logger.trace("Filtering request: {} {}", method, path);
 
         // Allow public resources
@@ -61,7 +62,7 @@ public class AuthFilter implements Filter {
     private boolean isPublicResource(String path) {
         return path.equals("/index.jsp") || 
         	   path.equals("/healthz") ||
-               path.equals("/oauth2callback") ||
+               path.equals("/oauth2callback") ||              
                path.equals("/auth/google") ||
                path.startsWith("/css/") ||  
                path.startsWith("/js/") ||

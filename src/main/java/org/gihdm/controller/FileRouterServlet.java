@@ -6,6 +6,7 @@ import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.*;
 
 import org.gihdm.services.*;
+import org.gihdm.model.UploadResult;
 import org.gihdm.utils.FileTypeUtil;
 import org.gihdm.repository.DocumentRepository;
 import org.gihdm.security.CSRFTokenManager;
@@ -14,6 +15,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.net.SocketTimeoutException;
 import java.net.URLEncoder;
 import java.sql.SQLException;
 
@@ -44,7 +46,7 @@ public class FileRouterServlet extends HttpServlet {
     	        if (!validateFileSize(filePart, session, req, resp)) return;
 
     	        // Process upload
-    	        UploadResult result = processUpload(filePart, category, session, req, resp);
+    	        UploadResult result = processUpload(filePart, category, session);
     	        if (result == null) return;
 
     	        fileUrl = result.fileUrl();
@@ -68,21 +70,25 @@ public class FileRouterServlet extends HttpServlet {
     	    }
     	}
 
-    private boolean validateRequest(HttpSession session, HttpServletRequest req, HttpServletResponse resp)
+    private boolean validateRequest(HttpSession session, HttpServletRequest req, HttpServletResponse resp) 
             throws IOException {
         if (session.getAttribute("googleToken") == null || session.getAttribute("googleUserEmail") == null) {
-            resp.sendRedirect("index.jsp");
+            if (!resp.isCommitted()) {
+                resp.sendRedirect("index.jsp");
+            }
             return false;
         }
 
         String csrfToken = req.getParameter("csrfToken");
         if (!CSRFTokenManager.isValidToken(session, csrfToken)) {
-            resp.sendError(403, "Invalid CSRF Token");
+            if (!resp.isCommitted()) {
+                resp.sendError(403, "Invalid CSRF Token");
+            }
             return false;
         }
         return true;
     }
-
+    
     private String getValidCategory(String requestedCategory, HttpServletRequest req) {
         String[] validCategories = {
             "Letters", "Certificates", "Program Sheets",
@@ -106,34 +112,48 @@ public class FileRouterServlet extends HttpServlet {
 
     private boolean validateFileSize(Part filePart, HttpSession session, HttpServletRequest req, HttpServletResponse resp)
             throws IOException {
-        long maxSize = 50 * 1024 * 1024;
+        long maxSize = 2 * 1024 * 1024 * 1024;
         if (filePart.getSize() > maxSize) {
-            session.setAttribute("toastMessage", "File too large (max 50MB)");
+            session.setAttribute("toastMessage", "File too large (max 2GB)");
             resp.sendRedirect(req.getContextPath() + "/home");
             return false;
         }
         return true;
     }
-
-    private UploadResult processUpload(Part filePart, String category,
-                                       HttpSession session, HttpServletRequest req, HttpServletResponse resp) throws Exception {
+   
+    private UploadResult processUpload(Part filePart, String category, HttpSession session) throws Exception {
         String fileType = FileTypeUtil.getFileType(filePart.getSubmittedFileName());
+        int maxRetries = 3;
+        int attempt = 0;
+        Exception lastException = null;
 
-        if (FileTypeUtil.isImage(fileType)) {
-            String uploadedUrl = CloudinaryService.upload(filePart);
-            String publicId = CloudinaryService.extractPublicId(uploadedUrl);
-            return new UploadResult(uploadedUrl, publicId, "CLOUDINARY");
-        } else if (FileTypeUtil.isVideo(fileType)) {
-            session.setAttribute("toastMessage", "Uploads for Videos are temporarily unavailable.");
-            session.setAttribute("toastType", "error");
-            resp.sendRedirect(req.getContextPath() + "/home?category=" + URLEncoder.encode(category, "UTF-8"));
-            return null;
-        } else {
-            var driveResult = GoogleDriveService.upload(filePart, category, session);
-            return new UploadResult(driveResult.fileUrl(), driveResult.fileId(), "DRIVE");
+        while (attempt < maxRetries) {
+            try {
+                if (FileTypeUtil.isImage(fileType)) {
+                    String uploadedUrl = CloudinaryService.upload(filePart);
+                    String publicId = CloudinaryService.extractPublicId(uploadedUrl);
+                    return new UploadResult(uploadedUrl, publicId, "CLOUDINARY");
+                } else if (FileTypeUtil.isVideo(fileType)) {
+                    return YouTubeService.upload(filePart, category, session);
+                } else {
+                    var driveResult = GoogleDriveService.upload(filePart, category, session);
+                    return new UploadResult(driveResult.fileUrl(), driveResult.fileId(), "DRIVE");
+                }
+            } catch (SocketTimeoutException e) {
+                lastException = e;
+                attempt++;
+                logger.warn("Upload attempt {} failed, retrying...", attempt);
+                if (attempt < maxRetries) {
+                    Thread.sleep(2000); // Wait 2 seconds before retry
+                }
+            }
         }
-    }
-
+        
+        throw lastException != null ? lastException : 
+            new IOException("Upload failed after " + maxRetries + " attempts");
+    }    
+    
+ 
     private void saveDocumentMetadata(String fileName, String fileUrl, String fileId,
                                       String category, String storageProvider, String uploadedBy) throws SQLException {
         try (DocumentRepository repo = new DocumentRepository()) {
@@ -158,29 +178,35 @@ session.setAttribute("toastType", "error");
 resp.sendRedirect(req.getContextPath() + "/home");
 }
 
-private void cleanupFailedUpload(String fileUrl, String fileId, String storageProvider, 
+    private void cleanupFailedUpload(String fileUrl, String fileId, String storageProvider, 
             HttpSession session) {
-try {
-logger.debug("Attempting cleanup of {} file: {}", storageProvider, fileId);
-switch (storageProvider) {
-case "CLOUDINARY" -> {
-String publicId = CloudinaryService.extractPublicId(fileUrl);
-if (publicId != null) {
- CloudinaryService.delete(publicId);
-}
-}
-case "DRIVE" -> {
-// Use fileId directly if available, otherwise extract from URL
-String idToDelete = (fileId != null) ? fileId : GoogleDriveService.extractFileId(fileUrl);
-if (idToDelete != null) {
- GoogleDriveService.delete(idToDelete, session);
-}
-}
-}
-} catch (Exception ex) {
-logger.error("Cleanup failed for {}", fileUrl, ex);
-}
-}
+        try {
+            logger.debug("Attempting cleanup of {} file: {}", storageProvider, fileId);
+            switch (storageProvider) {
+                case "CLOUDINARY" -> {
+                    // Cloudinary uses publicId which is stored in fileId
+                    if (fileId != null) {
+                        CloudinaryService.delete(fileId);
+                    }
+                }
+                case "DRIVE" -> {
+                    // Use fileId directly for Drive
+                    if (fileId != null) {
+                        GoogleDriveService.delete(fileId, session);
+                    }
+                }
+                case "YOUTUBE" -> {
+                    // Use fileId directly for YouTube (already contains video ID)
+                    if (fileId != null) {
+                        YouTubeService.delete(fileId, session);
+                    }
+                }
+                default -> logger.warn("Unknown storage provider: {}", storageProvider);
+            }
+        } catch (Exception ex) {
+            logger.error("Cleanup failed for {} file (provider: {}): {}", 
+                fileId, storageProvider, ex.getMessage(), ex);
+        }
+    }    
 
-    private record UploadResult(String fileUrl, String fileId, String storageProvider) {}
 }

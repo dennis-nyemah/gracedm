@@ -37,10 +37,38 @@ public class HomeServlet extends HttpServlet {
             logger.debug("Fetching documents for home page");
             List<Document> allDocuments = repo.findAll();
             Map<String, List<Document>> documentsByCategory = allDocuments.stream()
-            	    .collect(Collectors.groupingBy(d -> d.getCategory())); 
-            logger.debug("Fetched documents: " + documentsByCategory);
+            	    .collect(Collectors.groupingBy(Document::getCategory)); 
+            logger.debug("Fetched documents: " + documentsByCategory);       
+            
+
+            // Create separate lists for media feeds based on actual categories
+            List<Document> allVideos = allDocuments.stream()
+                    .filter(d -> d.getCategory().equals("Videos") || 
+                               d.getCategory().equals("Sermons") ||
+                               d.getCategory().equals("Service Moments") ||
+                               d.getCategory().equals("Events"))
+                    .collect(Collectors.toList());
+            
+            List<Document> allPictures = allDocuments.stream()
+                    .filter(d -> d.getCategory().equals("Pictures") || 
+                               d.getCategory().equals("Services") ||
+                               d.getCategory().equals("Programs") ||
+                               d.getCategory().equals("Others"))
+                    .collect(Collectors.toList());
+            
+            List<Document> allDocs = allDocuments.stream()
+                    .filter(d -> d.getCategory().equals("Documents") || 
+                               d.getCategory().equals("Letters") ||
+                               d.getCategory().equals("Certificates") ||
+                               d.getCategory().equals("Program Sheets"))
+                    .collect(Collectors.toList());
+            
+           
          
             req.setAttribute("documentsByCategory", documentsByCategory);
+            req.setAttribute("allVideos", allVideos);
+            req.setAttribute("allPictures", allPictures);
+            req.setAttribute("allDocuments", allDocs);
             req.setAttribute("currentCategory", currentCategory);
             
             if (session != null) {

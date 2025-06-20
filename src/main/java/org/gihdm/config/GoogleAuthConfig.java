@@ -25,8 +25,10 @@ public class GoogleAuthConfig {
     private static final JsonFactory JSON_FACTORY = GsonFactory.getDefaultInstance();
     public static final List<String> SCOPES = List.of(
         DriveScopes.DRIVE,
+        "https://www.googleapis.com/auth/youtube.upload",
+        "https://www.googleapis.com/auth/youtube",
         "openid",
-        "email"
+      	"email" 		
     );   
     
     private static GoogleClientSecrets clientSecrets;

@@ -41,7 +41,7 @@ build/
 /src/main/resources/application.properties
 /src/main/resources/cloudinary.properties
 /src/main/resources/credentials.json
-
+ 
 # Optional: Keep template files tracked (but ignore generated files)
 !src/main/resources/*.template
 
@@ -55,3 +55,4 @@ build/
 **/*.keystore
 **/*.jks
 **/credentials*.json
+ 

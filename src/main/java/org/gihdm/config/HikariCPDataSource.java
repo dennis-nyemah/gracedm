@@ -44,14 +44,18 @@ public class HikariCPDataSource {
             config.setPassword(password);
             
             // Production-optimized settings
-            config.setMaximumPoolSize(Integer.parseInt( System.getenv().getOrDefault("DB_MAX_POOL_SIZE", "3"))); 
+            config.setConnectionTestQuery("SELECT 1");
+            config.setValidationTimeout(5000); // 5 seconds
+            config.setMaximumPoolSize(Integer.parseInt( System.getenv().getOrDefault("DB_MAX_POOL_SIZE", "20"))); 
             config.setMinimumIdle(Integer.parseInt(System.getenv().getOrDefault("DB_MIN_IDLE", "1"))); 
-            config.setConnectionTimeout(30000); 
+            config.setConnectionTimeout(10000); 
             config.setIdleTimeout(600000);
             config.setMaxLifetime(1800000); 
-            config.setLeakDetectionThreshold(5000);
+            config.setLeakDetectionThreshold(30000);
             config.setPoolName("GraceDMPool");
-
+            
+            // Add these properties for better handling
+             
             dataSource = new HikariDataSource(config);
             logger.info("Database connection pool initialized successfully");
 
