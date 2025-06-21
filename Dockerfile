@@ -1,4 +1,4 @@
- # Stage 1: Build the application# Stage 1: Build the application
+# Stage 1: Build the application
 FROM maven:3.8.7-eclipse-temurin-17 AS build
 WORKDIR /app
 COPY pom.xml .
@@ -16,6 +16,9 @@ RUN rm -rf /usr/local/tomcat/webapps/ROOT && \
     rm -rf /usr/local/tomcat/webapps/examples && \
     rm -rf /usr/local/tomcat/webapps/manager && \
     rm -rf /usr/local/tomcat/webapps/host-manager
+
+# ✅ Copy custom Tomcat server.xml with secure session handling
+COPY server.xml /usr/local/tomcat/conf/server.xml
 
 # Copy WAR file from build stage
 COPY --from=build /app/target/gracedm.war /usr/local/tomcat/webapps/ROOT.war
