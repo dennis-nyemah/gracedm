@@ -1,7 +1,6 @@
 package org.gihdm.filters;
 
 import jakarta.servlet.*;
-
 import jakarta.servlet.annotation.WebFilter;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -21,13 +20,13 @@ public class AuthFilter implements Filter {
         logger.info("Initializing AuthFilter");
     }
 
-    public void doFilter(ServletRequest req, ServletResponse res, FilterChain chain) 
+    public void doFilter(ServletRequest req, ServletResponse res, FilterChain chain)
             throws IOException, ServletException {
         HttpServletRequest request = (HttpServletRequest) req;
         HttpServletResponse response = (HttpServletResponse) res;
         String path = request.getRequestURI().substring(request.getContextPath().length()).toLowerCase();
         String method = request.getMethod();
-      
+
         logger.trace("Filtering request: {} {}", method, path);
 
         // Allow public resources
@@ -43,48 +42,43 @@ public class AuthFilter implements Filter {
         String userEmail = session != null ? (String) session.getAttribute("googleUserEmail") : null;
 
         if (session == null || userEmail == null) {
-            logger.warn("Unauthorized access attempt to {} by user: {}", 
+            logger.warn("Unauthorized access attempt to {} by user: {}",
                 path, userEmail != null ? userEmail : "no-session");
             response.sendRedirect(request.getContextPath() + "/index.jsp");
             return;
         }
 
-        // Apply security headers
-        applySecurityHeaders(response);
-        
         // Add cookie attributes
         addCookieAttributes(response);
-        
+
         logger.debug("Authorized request to {} by user: {}", path, userEmail);
         chain.doFilter(request, response);
     }
 
     private boolean isPublicResource(String path) {
-        return path.equals("/index.jsp") || 
-        	   path.equals("/googlee0aa0dca05c3108e.html") ||
-        	   path.equals("/healthz") ||
-               path.equals("/oauth2callback") ||              
+        return path.equals("/index.jsp") ||
+               path.equals("/googlee0aa0dca05c3108e.html") ||
+               path.equals("/healthz") ||
+               path.equals("/oauth2callback") ||
                path.equals("/auth/google") ||
-               path.startsWith("/css/") ||  
+               path.startsWith("/css/") ||
                path.startsWith("/js/") ||
-        	   path.startsWith("/images/") ||
-        	   path.endsWith(".ico") ||
-        	   path.endsWith(".png") ||
-        	   path.endsWith(".jpg") ||
-        	   path.endsWith(".woff") ||
-        	   path.endsWith(".woff2") ||
-        	   path.endsWith(".ttf");
-    }
-    
-    private void applySecurityHeaders(HttpServletResponse response) {
-        response.setHeader("X-Content-Type-Options", "nosniff");
-        response.setHeader("X-Frame-Options", "DENY");
-        response.setHeader("X-XSS-Protection", "1; mode=block");
-        response.setHeader("Content-Security-Policy", 
-            "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'");
-        response.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
-        response.setHeader("Feature-Policy", 
-            "geolocation 'none'; microphone 'none'; camera 'none'");
+               path.startsWith("/images/") ||
+               path.startsWith("/fonts/") ||
+               path.startsWith("/static/") ||
+               path.startsWith("/assets/") ||
+               path.endsWith(".ico") ||
+               path.endsWith(".png") ||
+               path.endsWith(".jpg") ||
+               path.endsWith(".jpeg") ||
+               path.endsWith(".webp") ||
+               path.endsWith(".svg") ||
+               path.endsWith(".mp4") ||
+               path.endsWith(".webm") ||
+               path.endsWith(".woff") ||
+               path.endsWith(".woff2") ||
+               path.endsWith(".ttf") ||
+               path.endsWith(".eot");
     }
 
     private void addCookieAttributes(HttpServletResponse response) {
@@ -96,11 +90,11 @@ public class AuthFilter implements Filter {
         List<String> updatedHeaders = new ArrayList<>();
         for (String header : headers) {
             StringBuilder newHeader = new StringBuilder(header);
-            
+
             if (!header.contains("SameSite")) {
                 newHeader.append("; SameSite=Lax");
             }
-            if (!header.contains("Secure") ) {
+            if (!header.contains("Secure")) {
                 newHeader.append("; Secure");
             }
             if (!header.contains("HttpOnly")) {
@@ -109,10 +103,10 @@ public class AuthFilter implements Filter {
             if (!header.contains("Path=")) {
                 newHeader.append("; Path=/");
             }
-            
+
             updatedHeaders.add(newHeader.toString());
         }
-        
+
         if (!updatedHeaders.isEmpty()) {
             response.setHeader("Set-Cookie", String.join(", ", updatedHeaders));
         }

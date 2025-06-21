@@ -55,8 +55,22 @@
             </cookie-config>
     </session-config>
 
-    <!-- Removed: 
-         - security-constraint (HTTPS enforcement)
-         - All filter declarations (handled by @WebFilter)
-    -->
+    <filter>
+      <filter-name>CSPFilter</filter-name>
+      <filter-class>org.gihdm.filters.CSPFilter</filter-class>
+    </filter>
+    <filter-mapping>
+      <filter-name>CSPFilter</filter-name>
+      <url-pattern>/*</url-pattern>
+    </filter-mapping>
+
+    <filter>
+      <filter-name>AuthFilter</filter-name>
+      <filter-class>org.gihdm.filters.AuthFilter</filter-class>
+    </filter>
+    <filter-mapping>
+      <filter-name>AuthFilter</filter-name>
+      <url-pattern>/*</url-pattern>
+    </filter-mapping>
+      
 </web-app>
