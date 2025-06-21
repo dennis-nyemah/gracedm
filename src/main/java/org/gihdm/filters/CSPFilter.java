@@ -22,7 +22,7 @@ public class CSPFilter implements Filter {
             "script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://www.youtube.com https://s.ytimg.com; " +
             "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com https://use.fontawesome.com https://www.youtube.com; " +
             "style-src-elem 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com https://use.fontawesome.com https://www.youtube.com; " +
-            "img-src 'self' data: https://res.cloudinary.com https://drive.google.com https://www.youtube.com https://i.ytimg.com; " +
+            "img-src 'self' data: https://res.cloudinary.com https://drive.google.com https://www.youtube.com https://i.ytimg.com https://developers.google.com; " +
             "font-src 'self' https://fonts.gstatic.com https://use.fontawesome.com https://cdnjs.cloudflare.com; " +
             "media-src 'self' https://drive.google.com https://www.youtube.com; " +
             "connect-src 'self' https://www.youtube.com; " +
