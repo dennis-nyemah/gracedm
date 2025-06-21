@@ -357,60 +357,63 @@ function setupContextMenu() {
         }
     });
 
-    // Download option
-    const downloadOption = document.getElementById('downloadOption');
-    if (downloadOption) {
-        downloadOption.addEventListener('click', function() {
-            if (currentFileId) {
-                const contextPath = '/' + window.location.pathname.split('/')[1];
-                const downloadUrl = contextPath + '/download-file?id=' + encodeURIComponent(currentFileId);
-                window.open(downloadUrl, '_blank');
-                showToast('Download started', 'success');
-            }
-            document.getElementById('contextMenu').style.display = 'none';
-        });
-    }
+	// Inside setupContextMenu() function
 
-    // Delete option
-    const deleteOption = document.getElementById('deleteOption');
-    if (deleteOption) {
-        deleteOption.addEventListener('click', function() {
-            if (currentFileId && confirm('Are you sure you want to delete this file?')) {
-                deleteFile(currentFileId);
-            }
-            document.getElementById('contextMenu').style.display = 'none';
-        });
-    }
+	// Download option
+	const downloadOption = document.getElementById('downloadOption');
+	if (downloadOption) {
+	    downloadOption.addEventListener('click', function() {
+	        if (currentFileId) {
+	            // Use absolute path for download URL
+	            const downloadUrl = '/download-file?id=' + encodeURIComponent(currentFileId);
+	            window.open(downloadUrl, '_blank');
+	            showToast('Download started', 'success');
+	        }
+	        document.getElementById('contextMenu').style.display = 'none';
+	    });
+	}
 
-    function deleteFile(fileId) {
-        try {
-            const csrfTokenField = document.querySelector('input[name="csrfToken"]');
-            const csrfToken = csrfTokenField ? csrfTokenField.value : '';
-            const xhr = new XMLHttpRequest();
-            const contextPath = '/' + window.location.pathname.split('/')[1];
-            xhr.open('POST', contextPath + '/delete-file', true);
-            xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
-            if (csrfToken) {
-                xhr.setRequestHeader('X-CSRF-Token', csrfToken);
-            }
-            xhr.onreadystatechange = function() {
-                if (xhr.readyState === 4) {
-                    if (xhr.status === 200) {
-                        showToast('File deleted successfully', 'success');
-                        const fileElement = document.querySelector('li[data-file-id="' + fileId + '"]');
-                        if (fileElement) fileElement.remove();
-                        handleFileChange();
-                    } else {
-                        showToast('Failed to delete file', 'error');
-                    }
-                }
-            };
-            xhr.send('id=' + encodeURIComponent(fileId));
-        } catch (error) {
-            showToast('Error deleting file', 'error');
-            console.error('Delete error:', error);
-        }
-    }
+	// Delete option
+	const deleteOption = document.getElementById('deleteOption');
+	if (deleteOption) {
+	    deleteOption.addEventListener('click', function() {
+	        if (currentFileId && confirm('Are you sure you want to delete this file?')) {
+	            deleteFile(currentFileId);
+	        }
+	        document.getElementById('contextMenu').style.display = 'none';
+	    });
+	}
+
+	function deleteFile(fileId) {
+	    try {
+	        const csrfTokenField = document.querySelector('input[name="csrfToken"]');
+	        const csrfToken = csrfTokenField ? csrfTokenField.value : '';
+	        const xhr = new XMLHttpRequest();
+	        // Use absolute path for delete URL
+	        xhr.open('POST', '/delete-file', true);
+	        xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
+	        if (csrfToken) {
+	            xhr.setRequestHeader('X-CSRF-Token', csrfToken);
+	        }
+	        xhr.onreadystatechange = function() {
+	            if (xhr.readyState === 4) {
+	                if (xhr.status === 200) {
+	                    showToast('File deleted successfully', 'success');
+	                    const fileElement = document.querySelector('li[data-file-id="' + fileId + '"]');
+	                    if (fileElement) fileElement.remove();
+	                    handleFileChange();
+	                } else {
+	                    showToast('Failed to delete file', 'error');
+	                }
+	            }
+	        };
+	        xhr.send('id=' + encodeURIComponent(fileId));
+	    } catch (error) {
+	        showToast('Error deleting file', 'error');
+	        console.error('Delete error:', error);
+	    }
+	}
+
 }
 
 // Initialize the app when DOM is fully loaded
