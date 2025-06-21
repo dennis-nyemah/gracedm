@@ -1,0 +1,14 @@
+services:
+  gracedm-app:
+    build: .
+    image: gracedm
+    container_name: gracedm-container
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./src/main/resources/application.properties:/usr/local/tomcat/conf/application.properties
+      - ./src/main/resources/cloudinary.properties:/usr/local/tomcat/conf/cloudinary.properties
+      - ./src/main/resources/credentials.json:/usr/local/tomcat/conf/credentials.json
+    environment:
+      - JAVA_OPTS=-Xmx512m -Djava.security.egd=file:/dev/./urandom
+    restart: unless-stopped

@@ -52,6 +52,6 @@ services:
 
 databases:
   - name: gracedm-db
-    databaseName: gracedm_prod_1kh6
+    databaseName: gracedm_prod_j89g
     user: gracedm_admin
     plan: free

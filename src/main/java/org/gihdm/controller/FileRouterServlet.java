@@ -15,12 +15,17 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.SocketTimeoutException;
 import java.net.URLEncoder;
 import java.sql.SQLException;
 
 @WebServlet("/upload")
-@MultipartConfig
+@MultipartConfig(
+	    maxFileSize = 2147483648L,    // 2GB
+	    maxRequestSize = 2147483648L, // 2GB
+	    fileSizeThreshold = 1048576    // 1MB in memory before temp file
+	)
 public class FileRouterServlet extends HttpServlet {
     private static final Logger logger = LoggerFactory.getLogger(FileRouterServlet.class);
 
@@ -110,17 +115,26 @@ public class FileRouterServlet extends HttpServlet {
         return "Letters"; 
     }
 
-    private boolean validateFileSize(Part filePart, HttpSession session, HttpServletRequest req, HttpServletResponse resp)
+    private boolean validateFileSize(Part filePart, HttpSession session, 
+            HttpServletRequest req, HttpServletResponse resp) 
             throws IOException {
-        long maxSize = 2 * 1024 * 1024 * 1024;
-        if (filePart.getSize() > maxSize) {
-            session.setAttribute("toastMessage", "File too large (max 2GB)");
-            resp.sendRedirect(req.getContextPath() + "/home");
-            return false;
-        }
-        return true;
-    }
-   
+       // Stream-based validation (don't load entire file)
+       try (InputStream is = filePart.getInputStream()) {
+           long bytesRead = 0;
+           byte[] buffer = new byte[8192];
+           while (is.read(buffer) != -1) {
+               bytesRead += buffer.length;
+               if (bytesRead > 2L * 1024 * 1024 * 1024) { // 2GB
+                   session.setAttribute("toastMessage", "File exceeds 2GB limit");
+                   resp.sendRedirect(req.getContextPath() + "/home");
+                   return false;
+              }
+          }
+      }
+      return true;
+   }
+    
+    
     private UploadResult processUpload(Part filePart, String category, HttpSession session) throws Exception {
         String fileType = FileTypeUtil.getFileType(filePart.getSubmittedFileName());
         int maxRetries = 3;

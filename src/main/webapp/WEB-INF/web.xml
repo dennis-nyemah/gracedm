@@ -46,7 +46,7 @@
         <url-pattern>/images/*</url-pattern>
     </servlet-mapping>
 
-    <!-- Session Configuration (Temporarily relaxed for Render WAF) -->
+    <!-- Session Configuration -->
     <session-config>
         <session-timeout>30</session-timeout>
         <cookie-config>
